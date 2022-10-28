@@ -2,7 +2,11 @@ const { v4 } = require('uuid');
 
 const orders=[
 
-]
+];
+
+const transactions = [
+
+];
 
 const getAll = (req,res,next)=>{
     res
@@ -12,12 +16,60 @@ const getAll = (req,res,next)=>{
         })
 }
 
-const matchOrder= (price,quantity,type)=>{
+const getTransactions = (req,res,next)=>{
+    res
+        .status(200)
+        .json({
+            transactions : transactions
+        })
+}
+
+const matchOrder= (req,res,next)=>{
+    let {price,quantity,type,userId}= req.body;
     const filteredOrders= orders.filter((ord)=>{
         return ord.type !==type && ord.status==="ACTIVE"
     });
-    filteredOrders.sort((a,b)=> a.price - b.price);
-    console.log(filteredOrders);
+    let i=0;
+    
+    if(type === "BUY"){
+        filteredOrders.sort((a,b)=> a.price - b.price);
+    while(i<filteredOrders.length && quantity>0){
+        if( filteredOrders[i].price <= price){
+            
+            quantity-= Math.min(quantity,filteredOrders.quantity);
+            let t= {
+                buyer : userId,
+                seller : filteredOrders.userName,
+                price : filteredOrders.price[i],
+                quantity : filteredOrders.quantity
+            };
+            transactions.push(t);
+        }
+        i++;
+        }
+    }
+    else {
+        filteredOrders.sort((a,b)=> b.price-a.price);
+
+        while(i<filteredOrders.length && quantity>0){
+           if(filteredOrders[i].price >= price){
+            quantity-= Math.min(quantity,filteredOrders.quantity);
+            let t= {
+                buyer : filteredOrders.userName,
+                seller : user,
+                price : filteredOrders.price[i],
+                quantity : filteredOrders.quantity
+            }
+            transactions.push(t);
+           }
+           i++; 
+        }
+    }
+    res
+        .status(200)
+        .json({
+            transactions : transactions
+        })
 }
 
 const createOrder = (req,res,next)=>{
@@ -31,14 +83,17 @@ const createOrder = (req,res,next)=>{
         quantity
     }
     orders.push(createdOrder);
-    res
+        res
         .status(200)
         .json({
-            orders : orders
+            orders : orders,
+            transactions : transactions
         })
-    matchOrder(price,quantity,type);
+
 }
 
 
 exports.getAll = getAll;
 exports.createOrder = createOrder;
+exports.getTransactions = getTransactions;
+exports.matchOrder = matchOrder;
