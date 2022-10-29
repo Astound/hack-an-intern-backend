@@ -5,10 +5,13 @@ const app = express();
 
 const userRoute = require('./routes/user-route');
 const orderRoute = require('./routes/order-route');
+const transactionRoute= require('./routes/transaction-route');
 app.use(bodyParser.json());
 
 app.use('/user',userRoute);
 app.use('/order',orderRoute);
+app.use('/transactions',transactionRoute);
+
 app.listen(5000);
 
 console.log("Server started");

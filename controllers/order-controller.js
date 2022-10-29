@@ -1,28 +1,37 @@
 const { v4 } = require('uuid');
 
-const orders=[
+let buyOrders=new Map();
+let sellOrders=new Map();
 
-];
+let buyList = [];
+let sellList = [];
 
-const transactions = [
-
-];
+const getAllBuy = (req,res,next)=>{
+    res
+        .status(200)
+        .json({
+            type : "BUY",
+            orders : buyList
+        })
+}
+const getAllSell = (req,res,next)=>{
+    res
+        .status(200)
+        .json({
+            type : "SELL",
+            orders : sellList
+        })
+}
 
 const getAll = (req,res,next)=>{
     res
         .status(200)
         .json({
-            orders : orders
+            buyOrders : buyList,
+            sellOrders : sellList
         })
 }
 
-const getTransactions = (req,res,next)=>{
-    res
-        .status(200)
-        .json({
-            transactions : transactions
-        })
-}
 
 const matchOrder= (req,res,next)=>{
     let {price,quantity,type,userId}= req.body;
@@ -74,26 +83,39 @@ const matchOrder= (req,res,next)=>{
 
 const createOrder = (req,res,next)=>{
     const {type,status,price,quantity,userId}  =req.body;
+    let orderId;
     const createdOrder = {
-        orderId : v4(),
         userId,
         type,
         status,
         price,
         quantity
     }
-    orders.push(createdOrder);
+    if(type === "BUY") {
+        orderId = v4();
+        buyOrders.set(orderId,createdOrder);
+        buyList.push({...createdOrder,orderId});
+    }
+    if(type === "SELL"){
+        orderId= v4();
+        sellOrders.set(orderId,createdOrder);
+        sellList.push({...createdOrder,orderId});
+    }
         res
         .status(200)
         .json({
-            orders : orders,
-            transactions : transactions
+            orderId : orderId
         })
 
 }
 
 
+exports.getAllBuy = getAllBuy;
+exports.getAllSell = getAllSell;
 exports.getAll = getAll;
 exports.createOrder = createOrder;
-exports.getTransactions = getTransactions;
-exports.matchOrder = matchOrder;
+exports.buyList = buyList;
+exports.sellList = sellList;
+exports.buyOrders = buyOrders;
+exports.sellOrders = sellOrders;
+

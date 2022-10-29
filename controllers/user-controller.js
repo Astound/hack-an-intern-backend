@@ -1,4 +1,4 @@
-const users = [
+let users = [
     {
         userId : 'a',
         userName : 'Suraj Gupta',
@@ -73,5 +73,5 @@ const updateUser = (req,res,next)=>{
 exports.getAll = getAll;
 exports.getUser = getUser;
 exports.updateUser = updateUser;
-
+exports.users = users;
 
