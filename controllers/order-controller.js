@@ -50,7 +50,7 @@ const createOrder = async(req,res,next)=>{
             if(userId=== userController.users[i].userId){
                 if(userController.users[i].fiat<price*quantity){
                     eventController.notifications.push({
-                        message : userController.users[i].userName + "tried to buy " + quantity  
+                        message : userController.users[i].userName + " tried to buy " + quantity  
                     })
                     res
                         .status(400)

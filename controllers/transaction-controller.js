@@ -9,26 +9,53 @@ let Price=[
     200
 ];
 
-function modifyUsers(buyer,seller,price,quantity){
+function modifyUsers(buyer,seller,buyerPrice,sellerPrice,quantity){
     let foundB = false;
     let foundS = false;
-    console.log("price",price);
+    console.log("sellerPrice",sellerPrice);
+    console.log("buyerPrice",buyerPrice);
     console.log("quantity",quantity)
     for(let i=0;i<userControl.users.length;i++){
         if(buyer===userControl.users[i].userId){
-            userControl.users[i]={
-                ...userControl.users[i],
-                stockCount : parseInt(userControl.users[i].stockCount) +parseInt(quantity)
-            } 
+            if(buyerPrice == 1e9){
+                userControl.users[i]={
+                    ...userControl.users[i],
+                    stockCount : parseInt(userControl.users[i].stockCount) +parseInt(quantity),
+                    fiat : parseInt(userControl.users[i].fiat) +  (parseInt(-1) -parseInt(sellerPrice))*quantity
+                }
+            }
+            else if(parseInt(sellerPrice) == -1){
+                userControl.users[i]={
+                    ...userControl.users[i],
+                    stockCount : parseInt(userControl.users[i].stockCount) +parseInt(quantity),
+                }
+            }
+            else {
+                userControl.users[i]={
+                    ...userControl.users[i],
+                    stockCount : parseInt(userControl.users[i].stockCount) +parseInt(quantity),
+                    fiat : parseInt(userControl.users[i].fiat) +  (parseInt(buyerPrice) -parseInt(sellerPrice))*quantity
+                }
+            }
             foundB=true;
             // console.log("buyer",userControl.users[i]);
         }
 
         if(seller===userControl.users[i].userId){
+           if(sellerPrice === -1){
             userControl.users[i]={
                 ...userControl.users[i],
-                fiat : parseInt(userControl.users[i].fiat) +parseInt(price)*parseInt(quantity)
+                stockCount : parseInt(userControl.users[i].stockCount) - parseInt(quantity),
+                fiat : parseInt(userControl.users[i].fiat) +parseInt(buyerPrice)*parseInt(quantity)
             } 
+           }
+           else{
+            userControl.users[i]={
+                ...userControl.users[i],
+                stockCount : parseInt(userControl.users[i].stockCount) - parseInt(quantity),
+                fiat : parseInt(userControl.users[i].fiat) +parseInt(sellerPrice)*parseInt(quantity)
+            } 
+        }
             foundS=true;
             // console.log("seller",userControl.users[i]);
         }
@@ -202,7 +229,7 @@ const matchOrder=(req,res,next)=>{
         userId = queryOrder.userId;
         console.log(queryOrder);
         if(price===-1) {
-            price =Number.MAX_SAFE_INTEGER;
+            price =1e9;
         }
         searchList.sort((a,b)=>a.price-b.price);
         for(let i=0;i<searchList.length;i++){
@@ -213,7 +240,7 @@ const matchOrder=(req,res,next)=>{
                     price : searchList[i].price,
                     quantity : Math.min(quantity,searchList[i].quantity)
                 })
-                modifyUsers(userId,searchList[i].userId, searchList[i].price , Math.min(quantity,searchList[i].quantity));
+                modifyUsers(userId,searchList[i].userId,price,searchList[i].price , Math.min(quantity,searchList[i].quantity));
                 eventController.notifications.push({
                     message : searchList[i].userName + " traded his " + Math.min(quantity,searchList[i].quantity) + " stocks with " + queryOrder.userName + " at " + searchList[i].price + "each"
                 })
@@ -224,11 +251,10 @@ const matchOrder=(req,res,next)=>{
                 else  if(parseInt(quantity)>parseInt(searchList[i].quantity)) {
                     clearOrder(searchList[i].orderId, "SELL");
                     modifyOrder(orderId,"BUY",parseInt(quantity)-parseInt(searchList[i].quantity));
-
                 }
                 else{
-                    clearOrder(orderId,"SELL");
-                    clearOrder(searchList[i].orderId, "BUY");
+                    clearOrder(orderId,"BUY");
+                    clearOrder(searchList[i].orderId, "SELL");
                 }
                 quantity -= Math.min(quantity,searchList[i].quantity);
                  Price.push(searchList[i].price); 
@@ -250,10 +276,10 @@ const matchOrder=(req,res,next)=>{
                 transactions.push({
                     buyer :  searchList[i].userId,
                     seller : userId,
-                    price : price,
+                    price : (price===-1)?searchList[i].price:price,
                     quantity : Math.min(quantity,searchList[i].quantity)
                  })
-                modifyUsers(searchList[i].userId,userId, price , Math.min(quantity,searchList[i].quantity));
+                modifyUsers(searchList[i].userId,userId,searchList[i].price, price , Math.min(quantity,searchList[i].quantity));
                 eventController.notifications.push({
                     message :  queryOrder.userName + " traded his " + Math.min(quantity,searchList[i].quantity) + " stocks with " +searchList[i].userName + " at " + price + "each"
                 })
@@ -270,7 +296,8 @@ const matchOrder=(req,res,next)=>{
                     clearOrder(searchList[i].orderId, "BUY");
                 }
                 quantity -= Math.min(quantity,searchList[i].quantity);
-                Price.push(price); 
+               if(price === -1) Price.push(searchList[i].price);
+               else Price.push(price); 
             }
             if(quantity === 0 ) break;
         }
