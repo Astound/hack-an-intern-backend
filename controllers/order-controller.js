@@ -1,5 +1,6 @@
 const { v4 } = require('uuid');
-
+const userController = require('./user-controller')
+const eventController = require('./notification-controller')
 let buyOrders=new Map();
 let sellOrders=new Map();
 
@@ -32,71 +33,73 @@ const getAll = (req,res,next)=>{
         })
 }
 
-
-const matchOrder= (req,res,next)=>{
-    let {price,quantity,type,userId}= req.body;
-    const filteredOrders= orders.filter((ord)=>{
-        return ord.type !==type && ord.status==="ACTIVE"
-    });
-    let i=0;
-    
-    if(type === "BUY"){
-        filteredOrders.sort((a,b)=> a.price - b.price);
-    while(i<filteredOrders.length && quantity>0){
-        if( filteredOrders[i].price <= price){
-            
-            quantity-= Math.min(quantity,filteredOrders.quantity);
-            let t= {
-                buyer : userId,
-                seller : filteredOrders.userName,
-                price : filteredOrders.price[i],
-                quantity : filteredOrders.quantity
-            };
-            transactions.push(t);
-        }
-        i++;
-        }
-    }
-    else {
-        filteredOrders.sort((a,b)=> b.price-a.price);
-
-        while(i<filteredOrders.length && quantity>0){
-           if(filteredOrders[i].price >= price){
-            quantity-= Math.min(quantity,filteredOrders.quantity);
-            let t= {
-                buyer : filteredOrders.userName,
-                seller : user,
-                price : filteredOrders.price[i],
-                quantity : filteredOrders.quantity
-            }
-            transactions.push(t);
-           }
-           i++; 
-        }
-    }
-    res
-        .status(200)
-        .json({
-            transactions : transactions
-        })
-}
-
-const createOrder = (req,res,next)=>{
-    const {type,status,price,quantity,userId}  =req.body;
+const createOrder = async(req,res,next)=>{
+    const {type,status,price,quantity,userId,userName}  =req.body;
     let orderId;
     const createdOrder = {
         userId,
+        userName,
         type,
         status,
         price,
         quantity
     }
+
     if(type === "BUY") {
+        for(let i=0;i<userController.users.length;i++){
+            if(userId=== userController.users[i].userId){
+                if(userController.users[i].fiat<price*quantity){
+                    eventController.notifications.push({
+                        message : userController.users[i].userName + "tried to buy " + quantity  
+                    })
+                    res
+                        .status(400)
+                        .json({
+                            message : "Can't place order you donot have enough money"
+                        })
+                    return
+                }
+                else {
+                    
+                    eventController.notifications.push({
+                        message : userController.users[i].userName + " place order to buy " + quantity + " stocks each at Rs."+price   
+                    })
+                    userController.users[i] ={
+                        ...userController.users[i],
+                        fiat : userController.users[i].fiat-parseInt(price)*parseInt(quantity)
+                    }
+                   
+                }
+            }
+        }
         orderId = v4();
         buyOrders.set(orderId,createdOrder);
         buyList.push({...createdOrder,orderId});
     }
     if(type === "SELL"){
+        for(let i=0;i<userController.users.length;i++){
+            if(userId=== userController.users[i].userId){
+                if(userController.users[i].stockCount<parseInt(quantity)){
+                    res
+                        .status(400)
+                        .json({
+                            message : "Can't place order you donot have enough stocks",
+                            stockCount : userController.users[i].stockCount,
+                            quantity : parseInt(quantity)
+                        })
+                    return
+                }
+                else {
+                    eventController.notifications.push({
+                        message : userController.users[i].userName + " placed order to sell " + quantity + " stocks each at Rs."+price   
+                    })
+                    userController.users[i] ={
+                        ...userController.users[i],
+                        stockCount : userController.users[i].stockCount-quantity
+                    }
+                }
+            }
+        }
         orderId= v4();
         sellOrders.set(orderId,createdOrder);
         sellList.push({...createdOrder,orderId});

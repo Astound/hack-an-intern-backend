@@ -1,3 +1,5 @@
+const eventController = require('./notification-controller')
+
 let users = [
     {
         userId : 'a',
@@ -56,11 +58,22 @@ const updateUser = (req,res,next)=>{
     const {userId,stockCount,fiat} = req.body;
     for(let i=0;i<users.length;i++){
         if(users[i].userId === userId){       
+            if(fiat !== users[i].fiat){
+                eventController.notifications.push({
+                    message : "Admin set fiat of " +  users[i].userName + " to " + fiat
+                })
+            }
+            if(stockCount !== users[i].stockCount){
+                eventController.notifications.push({
+                    message : "Admin set stock count of " +  users[i].userName + " to " + stockCount
+                })
+            }
             users[i]={
                 ...users[i],
                 stockCount : stockCount,
                 fiat : fiat
             }
+            
         }
     }
     res

@@ -1,16 +1,18 @@
 const express = require('express')
 const bodyParser = require('body-parser');
-// const mongoose = require('mongoose');
 const app = express();
 
 const userRoute = require('./routes/user-route');
 const orderRoute = require('./routes/order-route');
+const notificationRoute = require('./routes/notification-route');
 const transactionRoute= require('./routes/transaction-route');
 app.use(bodyParser.json());
 
 app.use('/user',userRoute);
 app.use('/order',orderRoute);
 app.use('/transactions',transactionRoute);
+app.use('/notifications', notificationRoute)
+// app.use('/binance', binanceRoute)
 
 app.listen(5000);
 
